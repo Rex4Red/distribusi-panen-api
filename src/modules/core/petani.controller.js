@@ -1,21 +1,64 @@
-// =============================================
-// TODO: ADIT - Implementasi Petani Controller
-// =============================================
-// Endpoint yang perlu dibuat:
-// 1. GET /petani      - List semua petani (JOIN users)
-// 2. GET /petani/:id  - Detail petani by ID
-//
-// Database: MySQL (tabel petani + users)
-// =============================================
-
 const db = require('../../config/mysql');
 
-// TODO ADIT: Implementasi get all petani
+// GET /petani
 exports.getAll = async (req, res, next) => {
-  res.status(501).json({ success: false, message: 'TODO: Adit - implementasi getAll petani' });
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        p.id,
+        p.user_id,
+        p.nama_usaha,
+        p.lokasi,
+        p.luas_lahan,
+        p.jenis_tanaman,
+        p.rating,
+        p.created_at,
+        u.nama,
+        u.email,
+        u.phone,
+        u.alamat
+      FROM petani p
+      JOIN users u ON p.user_id = u.id
+      ORDER BY p.created_at DESC
+    `);
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    next(error);
+  }
 };
 
-// TODO ADIT: Implementasi get petani by ID
+// GET /petani/:id
 exports.getById = async (req, res, next) => {
-  res.status(501).json({ success: false, message: 'TODO: Adit - implementasi getById petani' });
+  try {
+    const [rows] = await db.query(
+      `
+      SELECT
+        p.id,
+        p.user_id,
+        p.nama_usaha,
+        p.lokasi,
+        p.luas_lahan,
+        p.jenis_tanaman,
+        p.rating,
+        p.created_at,
+        u.nama,
+        u.email,
+        u.phone,
+        u.alamat
+      FROM petani p
+      JOIN users u ON p.user_id = u.id
+      WHERE p.id = ?
+      `,
+      [req.params.id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Petani tidak ditemukan' });
+    }
+
+    res.json({ success: true, data: rows[0] });
+  } catch (error) {
+    next(error);
+  }
 };

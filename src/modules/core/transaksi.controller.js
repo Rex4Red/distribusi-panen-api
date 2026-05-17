@@ -2,17 +2,178 @@ const db = require('../../config/mysql');
 const firestore = require('../../config/firestore');
 
 // =============================================
-// TODO: ADIT - Implementasi create & getAll transaksi
+// ADIT - Transaksi Create & List
 // =============================================
 
-// TODO ADIT: POST /transaksi - Buat transaksi baru
-exports.create = async (req, res, next) => {
-  res.status(501).json({ success: false, message: 'TODO: Adit - implementasi create transaksi' });
+const toNumber = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 };
 
-// TODO ADIT: GET /transaksi - List semua transaksi
+// POST /transaksi
+exports.create = async (req, res, next) => {
+  let connection;
+
+  try {
+    const { pembeli_id, produk_id, jumlah_kg } = req.body;
+    const jumlah = toNumber(jumlah_kg);
+
+    // Validasi input
+    if (!pembeli_id || !produk_id || jumlah === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'pembeli_id, produk_id, dan jumlah_kg wajib diisi',
+      });
+    }
+
+    // Validasi jumlah pembelian
+    if (jumlah <= 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'jumlah_kg harus lebih dari 0' 
+      });
+    }
+
+    // Membuat koneksi transaction MySQL
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    // Validasi apakah pembeli tersedia
+    const [pembeli] = await connection.query(
+      'SELECT id FROM pembeli WHERE id = ?', 
+      [pembeli_id]
+    );
+    
+    if (pembeli.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Pembeli tidak ditemukan' 
+      });
+    }
+
+    // Validasi apakah produk tersedia
+    const [produk] = await connection.query(
+      'SELECT id, petani_id, nama_produk, harga_per_kg, stok_kg, status FROM produk_panen WHERE id = ? FOR UPDATE',
+      [produk_id]
+    );
+
+    if (produk.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Produk tidak ditemukan' 
+      });
+    }
+
+    const selectedProduk = produk[0];
+    const stok = Number(selectedProduk.stok_kg);
+    const hargaPerKg = Number(selectedProduk.harga_per_kg);
+
+    // Validasi status produk
+    if (selectedProduk.status !== 'tersedia') {
+      await connection.rollback();
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Produk tidak tersedia' 
+      });
+    }
+
+    // Validasi stok produk
+    if (stok < jumlah) {
+      await connection.rollback();
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Stok produk tidak mencukupi' 
+      });
+    }
+    
+    const totalHarga = jumlah * hargaPerKg;
+    const sisaStok = stok - jumlah;
+
+    // Menambahkan data transaksi baru
+    const [result] = await connection.query(
+      `INSERT INTO transaksi
+       (pembeli_id, petani_id, produk_id, jumlah_kg, total_harga, status)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [pembeli_id, selectedProduk.petani_id, produk_id, jumlah, totalHarga, 'pending']
+    );
+
+    // Mengurangi stok produk setelah transaksi berhasil
+    await connection.query(
+      'UPDATE produk_panen SET stok_kg = ?, status = IF(? = 0, "habis", status) WHERE id = ?',
+      [sisaStok, sisaStok, produk_id]
+    );
+
+    // Menyimpan seluruh perubahan ke database
+    await connection.commit();
+
+    // Log activity di Firestore
+    await firestore.collection('activity_logs').add({
+      user_id: req.user.id,
+      action: 'create_transaksi',
+      detail: {
+        transaksi_id: result.insertId,
+        pembeli_id,
+        petani_id: selectedProduk.petani_id,
+        produk_id,
+        jumlah_kg: jumlah,
+        total_harga: totalHarga,
+      },
+      timestamp: new Date(),
+    });
+
+    // Kirim notifikasi transaksi ke petani
+    await firestore.collection('notifikasi').add({
+      user_id: selectedProduk.petani_id,
+      judul: 'Transaksi Baru',
+      pesan: `Pesanan ${selectedProduk.nama_produk} sebanyak ${jumlah} kg menunggu konfirmasi`,
+      tipe: 'transaksi_baru',
+      is_read: false,
+      created_at: new Date(),
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Transaksi berhasil dibuat',
+      data: {
+        id: result.insertId,
+        pembeli_id,
+        petani_id: selectedProduk.petani_id,
+        produk_id,
+        jumlah_kg: jumlah,
+        total_harga: totalHarga,
+        status: 'pending',
+      },
+    });
+  } catch (error) {
+    // Membatalkan seluruh perubahan jika terjadi kesalahan
+    if (connection) await connection.rollback();
+    next(error);
+  } finally {
+    if (connection) connection.release();
+  }
+};
+
+// GET /transaksi
 exports.getAll = async (req, res, next) => {
-  res.status(501).json({ success: false, message: 'TODO: Adit - implementasi getAll transaksi' });
+  try {
+    const [rows] = await db.query(`
+      SELECT t.*, pp.nama_produk, u_petani.nama as nama_petani, u_pembeli.nama as nama_pembeli
+      FROM transaksi t
+      JOIN produk_panen pp ON t.produk_id = pp.id
+      JOIN petani p ON t.petani_id = p.id
+      JOIN users u_petani ON p.user_id = u_petani.id
+      JOIN pembeli pb ON t.pembeli_id = pb.id
+      JOIN users u_pembeli ON pb.user_id = u_pembeli.id
+      ORDER BY t.created_at DESC
+    `);
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    next(error);
+  }
 };
 
 // =============================================
