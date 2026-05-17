@@ -17,7 +17,7 @@ src/
 │   ├── core/           → Module 2: Core Business (Petani, Produk, Transaksi, Pembayaran)
 │   └── logistik/       → Module 3: Logistik & Realtime (Pengiriman, Stok, Notifikasi)
 ├── config/             → Konfigurasi database
-├── middleware/          → Auth & Error handler
+├── middleware/         → Auth & Error handler
 ├── database/           → SQL schema
 └── app.js              → Entry point
 ```
