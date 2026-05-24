@@ -5,6 +5,7 @@ const produkController = require('./produk.controller');
 const transaksiController = require('./transaksi.controller');
 const pembayaranController = require('./pembayaran.controller');
 const authMiddleware = require('../../middleware/auth');
+const upload = require('../../middleware/upload');
 
 // Semua route di core perlu login
 router.use(authMiddleware);
@@ -18,9 +19,12 @@ router.get('/petani/:id', petaniController.getById);
 // =============================================
 // TODO ADIT: Produk routes
 // =============================================
-router.post('/produk', produkController.create);
+router.post('/produk', upload.array('foto', 3), produkController.create);  // Upload max 3 foto
 router.get('/produk', produkController.getAll);
+router.get('/produk/:id', produkController.getById);
+router.get('/produk/:id/foto', produkController.getFoto);           // Ambil foto dari Firestore
 router.put('/produk/:id', produkController.update);
+router.put('/produk/:id/verify', produkController.verify);          // Admin approve/reject
 router.delete('/produk/:id', produkController.remove);
 
 // =============================================

@@ -159,6 +159,22 @@ exports.create = async (req, res, next) => {
 // GET /transaksi
 exports.getAll = async (req, res, next) => {
   try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    let whereClause = '';
+    let params = [];
+
+    // Filter transaksi berdasarkan role user yang login
+    if (userRole === 'petani') {
+      whereClause = 'WHERE p.user_id = ?';
+      params = [userId];
+    } else if (userRole === 'pembeli') {
+      whereClause = 'WHERE pb.user_id = ?';
+      params = [userId];
+    }
+    // admin bisa lihat semua (tanpa WHERE)
+
     const [rows] = await db.query(`
       SELECT t.*, pp.nama_produk, u_petani.nama as nama_petani, u_pembeli.nama as nama_pembeli
       FROM transaksi t
@@ -167,8 +183,9 @@ exports.getAll = async (req, res, next) => {
       JOIN users u_petani ON p.user_id = u_petani.id
       JOIN pembeli pb ON t.pembeli_id = pb.id
       JOIN users u_pembeli ON pb.user_id = u_pembeli.id
+      ${whereClause}
       ORDER BY t.created_at DESC
-    `);
+    `, params);
 
     res.json({ success: true, data: rows });
   } catch (error) {
