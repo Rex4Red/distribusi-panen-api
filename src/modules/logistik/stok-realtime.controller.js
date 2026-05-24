@@ -19,14 +19,15 @@ exports.getAll = async (req, res, next) => {
 // PUT /stok-realtime/:id
 exports.update = async (req, res, next) => {
   try {
-    const { stok_kg, harga_per_kg, status } = req.body;
+    const updateData = { updated_at: new Date() };
+    
+    // Hanya set field yang dikirim
+    if (req.body.stok_kg !== undefined) updateData.stok_kg = req.body.stok_kg;
+    if (req.body.harga_per_kg !== undefined) updateData.harga_per_kg = req.body.harga_per_kg;
+    if (req.body.status !== undefined) updateData.status = req.body.status;
+    if (req.body.nama_produk !== undefined) updateData.nama_produk = req.body.nama_produk;
 
-    await firestore.collection('realtime_stok').doc(req.params.id).set({
-      stok_kg,
-      harga_per_kg,
-      status,
-      updated_at: new Date(),
-    }, { merge: true });
+    await firestore.collection('realtime_stok').doc(String(req.params.id)).set(updateData, { merge: true });
 
     res.json({ success: true, message: 'Stok realtime berhasil diupdate' });
   } catch (error) {

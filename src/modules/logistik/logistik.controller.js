@@ -27,12 +27,22 @@ exports.getDashboard = async (req, res, next) => {
 // GET /notifikasi
 exports.getNotifikasi = async (req, res, next) => {
   try {
-    const snapshot = await firestore
-      .collection('notifikasi')
-      .where('user_id', '==', req.user.id)
-      .orderBy('created_at', 'desc')
-      .limit(20)
-      .get();
+    let snapshot;
+    try {
+      snapshot = await firestore
+        .collection('notifikasi')
+        .where('user_id', '==', req.user.id)
+        .orderBy('created_at', 'desc')
+        .limit(20)
+        .get();
+    } catch (indexError) {
+      // Fallback jika composite index belum dibuat
+      snapshot = await firestore
+        .collection('notifikasi')
+        .where('user_id', '==', req.user.id)
+        .limit(20)
+        .get();
+    }
 
     const data = [];
     snapshot.forEach((doc) => {

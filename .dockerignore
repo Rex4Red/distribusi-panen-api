@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.env
+.env.example
+.git
+.gitignore
+README.md
+test-*.js
+nodemon.json
+*.md
+
+# Folders
+screenshoot/
+laporan/
+.agent/
