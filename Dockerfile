@@ -20,7 +20,6 @@ COPY --from=builder /app/node_modules ./node_modules
 # Copy source code
 COPY package*.json ./
 COPY src/ ./src/
-COPY serviceAccountKey.json ./serviceAccountKey.json
 
 # Cloud Run uses PORT env variable
 ENV PORT=8080
