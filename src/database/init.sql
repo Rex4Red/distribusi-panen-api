@@ -107,18 +107,18 @@ CREATE TABLE IF NOT EXISTS pengiriman (
 
 -- Admin user (password: admin123)
 INSERT INTO users (nama, email, password, role, phone, alamat) VALUES
-('Admin Sistem', 'admin@panen.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', '081234567890', 'Yogyakarta');
+('Admin Sistem', 'admin@panen.com', '$2b$10$XnzCo48Fzy5MltSbIahyCeTHupqaFoHfYFMngX0YAmPMnHyYG7jYW', 'admin', '081234567890', 'Yogyakarta');
 
 -- Petani user (password: petani123)
 INSERT INTO users (nama, email, password, role, phone, alamat) VALUES
-('Pak Budi', 'budi@panen.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'petani', '081234567891', 'Sleman, Yogyakarta');
+('Pak Budi', 'budi@panen.com', '$2b$10$dDav1czFZRGry8ezSCn.h.9x5YZ6WzDJK6EruWAZwH1gELou3Dmn6', 'petani', '081234567891', 'Sleman, Yogyakarta');
 
 INSERT INTO petani (user_id, nama_usaha, lokasi, luas_lahan, jenis_tanaman) VALUES
 (2, 'Tani Makmur Budi', 'Sleman, Yogyakarta', 2.5, 'Sayuran');
 
 -- Pembeli user (password: pembeli123)
 INSERT INTO users (nama, email, password, role, phone, alamat) VALUES
-('Restoran Sederhana', 'restoran@panen.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'pembeli', '081234567892', 'Kota Yogyakarta');
+('Restoran Sederhana', 'restoran@panen.com', '$2b$10$9gSzAI.1XRxfhH/c6Bkj/uZwqMEIE7ypA3fZua0QFx5lEhtNpXRRy', 'pembeli', '081234567892', 'Kota Yogyakarta');
 
 INSERT INTO pembeli (user_id, nama_bisnis, tipe, alamat_bisnis) VALUES
 (3, 'Restoran Sederhana', 'restoran', 'Jl. Malioboro No. 1, Yogyakarta');

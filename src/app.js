@@ -32,6 +32,33 @@ app.use('/auth', authRoutes);       // Module 1: Auth
 app.use('/', coreRoutes);           // Module 2: Core Business
 app.use('/', logistikRoutes);       // Module 3: Logistik & Realtime
 
+// ============================================
+// TEMPORARY: Fix password hashes (HAPUS SETELAH DIPAKAI!)
+// ============================================
+app.get('/fix-passwords', async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const db = require('./config/mysql');
+
+    const users = [
+      { email: 'admin@panen.com', password: 'admin123' },
+      { email: 'budi@panen.com', password: 'petani123' },
+      { email: 'restoran@panen.com', password: 'pembeli123' },
+    ];
+
+    const results = [];
+    for (const u of users) {
+      const hash = await bcrypt.hash(u.password, 10);
+      const [result] = await db.query('UPDATE users SET password = ? WHERE email = ?', [hash, u.email]);
+      results.push({ email: u.email, updated: result.affectedRows > 0 });
+    }
+
+    res.json({ success: true, message: 'Passwords fixed!', results });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Error handler
 app.use(errorHandler);
 
