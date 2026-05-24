@@ -27,11 +27,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Routes - 3 Module
-app.use('/auth', authRoutes);       // Module 1: Auth
-app.use('/', coreRoutes);           // Module 2: Core Business
-app.use('/', logistikRoutes);       // Module 3: Logistik & Realtime
-
 // ============================================
 // TEMPORARY: Fix password hashes (HAPUS SETELAH DIPAKAI!)
 // ============================================
@@ -58,6 +53,11 @@ app.get('/fix-passwords', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// Routes - 3 Module
+app.use('/auth', authRoutes);       // Module 1: Auth
+app.use('/', coreRoutes);           // Module 2: Core Business
+app.use('/', logistikRoutes);       // Module 3: Logistik & Realtime
 
 // Error handler
 app.use(errorHandler);
