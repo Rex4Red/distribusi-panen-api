@@ -86,11 +86,11 @@ export default function Login() {
         </form>
 
         {/* Info akun test untuk memudahkan pengujian */}
-        <div className="mt-8 text-sm text-gray-600 bg-gray-50 p-4 rounded-lg border border-gray-200">
+        {/* <div className="mt-8 text-sm text-gray-600 bg-gray-50 p-4 rounded-lg border border-gray-200">
           <p className="font-semibold mb-1 text-gray-800">📌 Akun Test Admin:</p>
           <p>Email: <span className="font-mono bg-gray-200 px-1 rounded">admin@panen.com</span></p>
           <p>Pass: <span className="font-mono bg-gray-200 px-1 rounded">admin123</span></p>
-        </div>
+        </div> */}
 
       </div>
     </div>
