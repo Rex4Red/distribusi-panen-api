@@ -100,15 +100,22 @@ exports.create = async (req, res, next) => {
 
     // Upload foto ke GCS jika ada
     const fotoUrls = [];
+    console.log('[UPLOAD] req.files:', req.files ? req.files.length : 'null/undefined');
+    console.log('[UPLOAD] Bucket name:', bucket.name);
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         try {
+          console.log('[UPLOAD] Uploading file:', file.originalname, 'size:', file.size, 'mime:', file.mimetype);
           const url = await uploadToGCS(file, produkId);
+          console.log('[UPLOAD] Success:', url);
           fotoUrls.push(url);
         } catch (uploadErr) {
-          console.error('Gagal upload foto:', uploadErr.message);
+          console.error('[UPLOAD] Gagal upload foto:', uploadErr.message);
+          console.error('[UPLOAD] Stack:', uploadErr.stack);
         }
       }
+    } else {
+      console.log('[UPLOAD] Tidak ada file foto yang dikirim');
     }
 
     // Update foto_url di MySQL agar tersimpan di database
