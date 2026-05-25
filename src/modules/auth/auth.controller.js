@@ -175,13 +175,16 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Email atau password salah' });
     }
 
-    // Mengirim token JWT dan data user tanpa password
+    // Mengambil data lengkap user (termasuk profil petani/pembeli)
+    const fullProfile = await getProfileByUserId(user.id);
+
+    // Mengirim token JWT dan data user lengkap
     res.json({
       success: true,
       message: 'Login berhasil',
       data: {
         token: signToken(user),
-        user: sanitizeUser(user),
+        user: fullProfile,
       },
     });
   } catch (error) {
