@@ -1,0 +1,26 @@
+steps:
+  # Build container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/distribusi-panen-api:$COMMIT_SHA', '.']
+
+  # Push to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/distribusi-panen-api:$COMMIT_SHA']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'distribusi-panen-api'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/distribusi-panen-api:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'DB_HOST=136.115.15.71,DB_USER=api_user,DB_PASSWORD=ApiPanen@2026!,DB_NAME=distribusi_panen,DB_PORT=3306,JWT_SECRET=distribusi-panen-secret-key-2026,JWT_EXPIRES_IN=7d,GOOGLE_CLOUD_PROJECT_ID=project-tcc06,GCS_BUCKET_NAME=project-tcc06-foto-produk'
+
+images:
+  - 'gcr.io/$PROJECT_ID/distribusi-panen-api:$COMMIT_SHA'
