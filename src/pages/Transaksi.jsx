@@ -113,7 +113,9 @@ export default function Transaksi() {
                       <div className="text-gray-800">{item.nama_produk} ({item.jumlah_kg}kg)</div>
                       <div className="text-sm text-gray-500">Petani: {item.nama_petani}</div>
                     </td>
-                    <td className="p-4 font-medium text-gray-800">Rp {item.total_harga?.toLocaleString('id-ID')}</td>
+                    <td className="p-4 text-gray-600">
+                      Rp {Number(item.total_harga).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
                     <td className="p-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(item.status)}`}>
                         {item.status.toUpperCase()}
