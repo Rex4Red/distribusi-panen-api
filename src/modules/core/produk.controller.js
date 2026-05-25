@@ -40,7 +40,8 @@ const uploadToGCS = async (file, produkId) => {
     metadata: {
       contentType: file.mimetype,
     },
-    public: true,
+    // Tidak pakai public: true karena bucket menggunakan Uniform Bucket-Level Access
+    // Bucket sudah di-set public via IAM (allUsers: Storage Object Viewer)
   });
 
   return `https://storage.googleapis.com/${bucket.name}/${fileName}`;
