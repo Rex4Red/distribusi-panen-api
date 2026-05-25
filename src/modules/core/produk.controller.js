@@ -228,7 +228,22 @@ exports.getAll = async (req, res, next) => {
       params
     );
 
-    res.json({ success: true, data: rows });
+    // Merge foto_urls dari Firestore untuk setiap produk
+    const enriched = await Promise.all(rows.map(async (row) => {
+      try {
+        const doc = await fotoCollection.doc(String(row.id)).get();
+        if (doc.exists) {
+          row.foto_urls = doc.data().foto_urls || [];
+        } else {
+          row.foto_urls = row.foto_url ? [row.foto_url] : [];
+        }
+      } catch {
+        row.foto_urls = row.foto_url ? [row.foto_url] : [];
+      }
+      return row;
+    }));
+
+    res.json({ success: true, data: enriched });
   } catch (error) {
     next(error);
   }
@@ -254,7 +269,20 @@ exports.getById = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Produk tidak ditemukan' });
     }
 
-    res.json({ success: true, data: rows[0] });
+    // Merge foto_urls dari Firestore
+    const produk = rows[0];
+    try {
+      const doc = await fotoCollection.doc(String(produk.id)).get();
+      if (doc.exists) {
+        produk.foto_urls = doc.data().foto_urls || [];
+      } else {
+        produk.foto_urls = produk.foto_url ? [produk.foto_url] : [];
+      }
+    } catch {
+      produk.foto_urls = produk.foto_url ? [produk.foto_url] : [];
+    }
+
+    res.json({ success: true, data: produk });
   } catch (error) {
     next(error);
   }
@@ -481,4 +509,3 @@ exports.remove = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
