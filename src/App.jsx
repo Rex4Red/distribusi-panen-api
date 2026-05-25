@@ -13,7 +13,7 @@ import Profil from './pages/Profil';
 
 // ==========================================
 // 🛡️ KOMPONEN PROTEKSI (GUARD)
-// ==========================================
+// =========================================
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   if (!token) return <Navigate to="/login" replace />;
