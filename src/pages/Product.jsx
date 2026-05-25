@@ -7,7 +7,7 @@ export default function Produk() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   
-  // State untuk mengontrol Modal (Popup
+  // State untuk mengontrol Modal (Popup)
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   // State untuk menyimpan data inputan form
