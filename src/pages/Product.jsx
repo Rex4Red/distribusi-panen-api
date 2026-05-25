@@ -62,13 +62,18 @@ export default function Produk() {
   // Fungsi utilitas untuk memastikan format foto selalu berupa Array
   // Menggunakan properti "foto_url" sesuai backend Anda
   const getProductPhotos = (product) => {
-    if (!product || !product.foto_url) return [];
+    if (!product) return [];
+    // Prioritas 1: foto_urls array dari Firestore (via API merge)
+    if (product.foto_urls && Array.isArray(product.foto_urls) && product.foto_urls.length > 0) {
+      return product.foto_urls;
+    }
+    // Prioritas 2: foto_url string dari MySQL
+    if (!product.foto_url) return [];
     if (Array.isArray(product.foto_url)) return product.foto_url;
-    // Jika backend mengirim string JSON array (misal: '["url1", "url2"]')
     if (typeof product.foto_url === 'string' && product.foto_url.startsWith('[')) {
       try { return JSON.parse(product.foto_url); } catch (e) { return [product.foto_url]; }
     }
-    return [product.foto_url]; // Jika hanya 1 string URL biasa
+    return [product.foto_url];
   };
 
   // Mengambil daftar foto untuk produk yang sedang dipilih
