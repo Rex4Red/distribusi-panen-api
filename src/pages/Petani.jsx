@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Eye, Edit, X } from 'lucide-react';
+import { Search, Eye, Edit, X, Trash2 } from 'lucide-react';
 import api from '../api';
 
 export default function Petani() {
@@ -64,6 +64,18 @@ export default function Petani() {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (window.confirm("Apakah Anda yakin ingin menghapus data petani ini?")) {
+      try {
+        await api.delete(`/petani/${id}`); // Memanggil API hapus
+        fetchPetani(); // Refresh tabel setelah hapus
+        alert('Data petani berhasil dihapus!');
+      } catch (error) {
+        alert('Gagal menghapus data petani.');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6 relative">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -121,7 +133,13 @@ export default function Petani() {
                         onClick={() => handleEditClick(item)}
                         className="flex items-center gap-1 px-3 py-1.5 text-sm bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
                       >
-                        <Edit size={16} /> 
+                        <Edit size={16} /> </button>
+                        
+                        <button 
+                        onClick={() => handleDelete(item.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>
