@@ -111,6 +111,11 @@ exports.create = async (req, res, next) => {
       }
     }
 
+    // Update foto_url di MySQL agar tersimpan di database
+    if (fotoUrls.length > 0) {
+      await db.query('UPDATE produk_panen SET foto_url = ? WHERE id = ?', [fotoUrls[0], produkId]);
+    }
+
     // Simpan metadata foto ke Firestore (NoSQL)
     await fotoCollection.doc(String(produkId)).set({
       produk_id: produkId,
