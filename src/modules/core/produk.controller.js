@@ -426,16 +426,43 @@ exports.update = async (req, res, next) => {
 // =============================================
 exports.remove = async (req, res, next) => {
   try {
-    // Hapus di MySQL
-    const [result] = await db.query('DELETE FROM produk_panen WHERE id = ?', [req.params.id]);
+    const produkId = req.params.id;
+
+    // Cek apakah produk punya transaksi terkait
+    const [transaksi] = await db.query(
+      'SELECT COUNT(*) as count FROM transaksi WHERE produk_id = ?',
+      [produkId]
+    );
+
+    if (transaksi[0].count > 0) {
+      // Soft delete: set status = nonaktif (karena ada riwayat transaksi)
+      await db.query(
+        "UPDATE produk_panen SET status = 'nonaktif' WHERE id = ?",
+        [produkId]
+      );
+
+      // Update Firestore
+      await stokCollection.doc(String(produkId)).set(
+        { status: 'nonaktif' },
+        { merge: true }
+      );
+
+      return res.json({
+        success: true,
+        message: 'Produk dinonaktifkan (memiliki riwayat transaksi)',
+      });
+    }
+
+    // Hard delete jika tidak ada transaksi
+    const [result] = await db.query('DELETE FROM produk_panen WHERE id = ?', [produkId]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Produk tidak ditemukan' });
     }
 
     // Hapus di Firestore
-    await stokCollection.doc(String(req.params.id)).delete();
-    await fotoCollection.doc(String(req.params.id)).delete();
+    await stokCollection.doc(String(produkId)).delete();
+    await fotoCollection.doc(String(produkId)).delete();
 
     res.json({ success: true, message: 'Produk berhasil dihapus' });
   } catch (error) {
