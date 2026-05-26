@@ -1,97 +1,109 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api'; // Memanggil konfigurasi axios yang kita buat di Langkah 4
+import { Mail, Lock, User as UserIcon } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(null);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      // Mengirim request POST ke endpoint login
-      const response = await api.post('/auth/login', { email, password });
-      
-      if (response.data.success) {
-        // Menyimpan token dan data user ke localStorage
-        localStorage.setItem('token', response.data.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.data.user));
-        
-        // Mengarahkan admin ke halaman dashboard setelah sukses
-        navigate('/dashboard');
-      }
-    } catch (err) {
-      // Menangkap dan menampilkan pesan error dari server (misal: password salah)
-      setError(err.response?.data?.message || 'Gagal login. Periksa kembali email dan password Anda.');
-    } finally {
-      setLoading(false);
+  // Efek untuk memuat gambar profil secara dinamis
+  useEffect(() => {
+    // 1. Coba ambil foto dari galeri lokal yang sudah disimpan user
+    const savedImg = localStorage.getItem('adminProfileImg');
+    
+    if (savedImg) {
+      setAvatarPreview(savedImg);
+    } 
+    // 2. Jika tidak ada foto, buat avatar otomatis dari email yang diketik
+    else if (email.length > 0) {
+      // Mengambil huruf pertama sebelum tanda @
+      const namePrefix = email.split('@')[0];
+      setAvatarPreview(`https://ui-avatars.com/api/?name=${namePrefix}&background=151515&color=fff&size=128`);
+    } 
+    // 3. Jika email kosong dan tidak ada foto
+    else {
+      setAvatarPreview(null);
     }
+  }, [email]);
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    // Simulasi login sukses
+    localStorage.setItem('token', 'dummy-token');
+    navigate('/dashboard');
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg border-t-4 border-green-600">
+    <div className="h-screen w-full bg-[#151515] flex items-center justify-center p-4 relative overflow-hidden">
+      
+      {/* Dekorasi Abstrak (Netral, bukan biru) */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-white/5 blur-[120px] rounded-full pointer-events-none"></div>
+      
+      {/* Kartu Login Putih */}
+      <div className="w-full max-w-md bg-white rounded-[2.5rem] p-10 md:p-14 shadow-2xl z-10 flex flex-col items-center">
         
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-green-800">Admin Panen</h2>
-          <p className="text-gray-500 mt-2">Silakan login untuk mengelola sistem</p>
+        {/* GAMBAR PROFIL DINAMIS */}
+        <div className="w-24 h-24 bg-[#151515] rounded-full flex items-center justify-center mb-10 shadow-lg overflow-hidden border-4 border-gray-50 transition-all duration-300">
+          {avatarPreview ? (
+            <img 
+              src={avatarPreview} 
+              alt="User Avatar" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <UserIcon size={40} className="text-white opacity-80" />
+          )}
         </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <form onSubmit={handleLogin} className="w-full space-y-8">
+          
+          {/* Input Email */}
+          <div className="relative flex items-center border-b-2 border-gray-200 focus-within:border-[#151515] transition-colors pb-2">
+            <Mail className="text-gray-400 mr-4" size={22} />
             <input 
               type="email" 
+              placeholder="Email ID"
+              className="bg-transparent w-full text-gray-800 outline-none placeholder:text-gray-400 text-lg font-medium"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
-              placeholder="admin@panen.com"
-              required 
+              required
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          {/* Input Password */}
+          <div className="relative flex items-center border-b-2 border-gray-200 focus-within:border-[#151515] transition-colors pb-2">
+            <Lock className="text-gray-400 mr-4" size={22} />
             <input 
               type="password" 
+              placeholder="Password"
+              className="bg-transparent w-full text-gray-800 outline-none placeholder:text-gray-400 text-lg font-medium"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
-              placeholder="••••••••"
-              required 
+              required
             />
           </div>
 
+          {/* Lupa Password */}
+          {/* <div className="flex justify-end">
+            <a href="#" className="text-sm text-gray-500 hover:text-[#151515] font-semibold transition-colors">
+              forgot password?
+            </a>
+          </div> */}
+
+          {/* TOMBOL LOGIN - Warna Monokrom Gelap */}
           <button 
-            type="submit" 
-            disabled={loading}
-            className={`w-full text-white font-semibold py-2 px-4 rounded-lg transition-colors ${
-              loading ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
-            }`}
+            type="submit"
+            className="w-full bg-[#151515] hover:bg-black text-white font-bold py-4 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 mt-4 tracking-widest text-lg uppercase"
           >
-            {loading ? 'Memproses...' : 'Login'}
+            LOGIN
           </button>
         </form>
 
-        {/* Info akun test untuk memudahkan pengujian */}
-        {/* <div className="mt-8 text-sm text-gray-600 bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <p className="font-semibold mb-1 text-gray-800">📌 Akun Test Admin:</p>
-          <p>Email: <span className="font-mono bg-gray-200 px-1 rounded">admin@panen.com</span></p>
-          <p>Pass: <span className="font-mono bg-gray-200 px-1 rounded">admin123</span></p>
-        </div> */}
-
+        <p className="mt-10 text-gray-400 text-sm font-medium">
+          Distribusi Panen &copy; {new Date().getFullYear()}
+        </p>
       </div>
     </div>
   );
