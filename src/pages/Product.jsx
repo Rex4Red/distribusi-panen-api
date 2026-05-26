@@ -150,21 +150,25 @@ export default function Produk() {
               ) : produk.length === 0 ? (
                 <tr><td colSpan="7" className="p-8 text-center text-gray-500">Belum ada produk yang perlu diverifikasi.</td></tr>
               ) : (
-                produk.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-4 font-medium text-gray-800">{item.nama_produk}</td>
-                    <td className="p-4 text-gray-600">{item.kategori}</td>
-                    <td className="p-4 text-gray-600 font-medium">{item.nama_petani || 'Nama Petani'}</td>
+                produk
+                  // 1. FILTER PELINDUNG: Buang data yang bernilai null atau undefined dari backend
+                  .filter((item) => item !== null && item !== undefined) 
+                  .map((item) => (
+                  
+                  // 2. TANDA TANYA (?): Optional chaining agar tidak crash jika ada properti yang hilang
+                  <tr key={item?.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="p-4 font-medium text-gray-800">{item?.nama_produk || '-'}</td>
+                    <td className="p-4 text-gray-600">{item?.kategori || '-'}</td>
+                    <td className="p-4 text-gray-600 font-medium">{item?.nama_petani || 'Anonim'}</td>
                     <td className="p-4 text-gray-600">
-                      Rp {Number(item.harga_per_kg).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Rp {Number(item?.harga_per_kg || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="p-4 text-gray-600">{item.stok_kg} kg</td>
+                    <td className="p-4 text-gray-600">{item?.stok_kg || 0} kg</td>
                     
                     {/* MENAMPILKAN LABEL STATUS */}
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-xl font-bold text-gray-800">Verifikasi Produk Petani</h2>
-                      {renderStatusLabel(selectedProduct.status)}
-                    </div>
+                    <td className="p-4">
+                      {renderStatusLabel(item?.status)}
+                    </td>
                     
                     <td className="p-4 flex justify-center">
                       <button 
