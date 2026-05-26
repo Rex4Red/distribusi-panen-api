@@ -22,6 +22,20 @@ export default function Produk() {
     fetchProduk();
   }, []);
 
+  // Fungsi untuk memformat tanggal & waktu ke bahasa Indonesia
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'Waktu tidak diketahui';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }) + ' WIB';
+  };
+
   const fetchProduk = async () => {
     try {
       setLoading(true);
@@ -46,8 +60,7 @@ export default function Produk() {
   // FUNGSI BARU: TOMBOL VERIFIKASI (SETUJUI/TOLAK)
   // ==========================================
   const handleVerification = async (id, statusAksi) => {
-    // SESUAIKAN DENGAN KEMAUAN BACKEND: 
-    // Jika admin klik setujui, kita kirim 'tersedia'. Jika tolak, kita kirim 'ditolak'.
+    // SESUAIKAN DENGAN KEMAUAN BACKEND
     const statusDatabase = statusAksi === 'approved' ? 'tersedia' : 'ditolak';
 
     try {
@@ -60,8 +73,13 @@ export default function Produk() {
     } catch (error) {
       console.warn("Backend error, mode preview aktif.");
       
+      // Fallback: Pura-pura berhasil di memori laptop
       const updatedProduk = produk.map(p => 
-        p.id === id ? { ...p, status: statusDatabase } : p
+        p.id === id ? { 
+          ...p, 
+          status: statusDatabase, 
+          verified_at: new Date().toISOString() // Simpan waktu saat ini untuk ditampilkan di modal
+        } : p
       );
       
       setProduk(updatedProduk);
@@ -92,9 +110,6 @@ export default function Produk() {
     if (touchStart - touchEnd < -50) handlePrevPhoto();
   };
 
-  // ==========================================
-  // KOMPONEN UI: LABEL STATUS (PILL)
-  // ==========================================
   // ==========================================
   // KOMPONEN UI: LABEL STATUS (PILL)
   // ==========================================
@@ -148,7 +163,7 @@ export default function Produk() {
                 <th className="p-4 font-semibold text-gray-600">Petani Pengirim</th>
                 <th className="p-4 font-semibold text-gray-600">Harga / Kg</th>
                 <th className="p-4 font-semibold text-gray-600">Stok</th>
-                <th className="p-4 font-semibold text-gray-600">Status</th> {/* KOLOM BARU */}
+                <th className="p-4 font-semibold text-gray-600">Status</th>
                 <th className="p-4 font-semibold text-gray-600 text-center">Review</th>
               </tr>
             </thead>
@@ -159,11 +174,9 @@ export default function Produk() {
                 <tr><td colSpan="7" className="p-8 text-center text-gray-500">Belum ada produk yang perlu diverifikasi.</td></tr>
               ) : (
                 produk
-                  // 1. FILTER PELINDUNG: Buang data yang bernilai null atau undefined dari backend
                   .filter((item) => item !== null && item !== undefined) 
                   .map((item) => (
                   
-                  // 2. TANDA TANYA (?): Optional chaining agar tidak crash jika ada properti yang hilang
                   <tr key={item?.id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4 font-medium text-gray-800">{item?.nama_produk || '-'}</td>
                     <td className="p-4 text-gray-600">{item?.kategori || '-'}</td>
@@ -173,7 +186,6 @@ export default function Produk() {
                     </td>
                     <td className="p-4 text-gray-600">{item?.stok_kg || 0} kg</td>
                     
-                    {/* MENAMPILKAN LABEL STATUS */}
                     <td className="p-4">
                       {renderStatusLabel(item?.status)}
                     </td>
@@ -201,8 +213,8 @@ export default function Produk() {
             <div className="flex justify-between items-center p-6 border-b border-gray-100 sticky top-0 bg-white z-10">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-bold text-gray-800">Verifikasi Produk Petani</h2>
-                {/* Tampilkan juga status saat ini di dalam Modal */}
-                {renderStatusLabel(selectedProduct.status_verifikasi)}
+                {/* Pastikan membaca properti .status */}
+                {renderStatusLabel(selectedProduct.status)}
               </div>
               <button onClick={() => setIsReviewModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
@@ -318,24 +330,56 @@ export default function Produk() {
               </div>
             </div>
 
-            {/* Bagian Bawah: Tombol Aksi Verifikasi */}
-            {/* Tombol disembunyikan jika status sudah disetujui, atau biarkan tetap ada jika admin boleh mengubah keputusannya.
-                Di sini saya biarkan tetap ada agar mudah diuji coba. */}
-            <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 sticky bottom-0">
-              <button 
-                onClick={() => handleVerification(selectedProduct.id, 'rejected')}
-                className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-red-500 text-red-600 hover:bg-red-50 font-semibold rounded-lg transition-colors"
-              >
-                <XCircle size={18} /> Tolak Produk
-              </button>
-              
-              <button 
-                onClick={() => handleVerification(selectedProduct.id, 'approved')}
-                className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white hover:bg-green-700 font-semibold rounded-lg shadow-sm transition-colors"
-              >
-                <CheckCircle size={18} /> Setujui & Tayangkan
-              </button>
+            {/* Bagian Bawah: Tombol Aksi ATAU Info Verifikasi */}
+            <div className="p-6 border-t border-gray-100 bg-gray-50 sticky bottom-0">
+              {(!selectedProduct.status || selectedProduct.status === 'menunggu_verifikasi') ? (
+                // JIKA MASIH PENDING: Tampilkan Tombol Aksi
+                <div className="flex justify-end gap-3">
+                  <button 
+                    onClick={() => handleVerification(selectedProduct.id, 'rejected')}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-red-500 text-red-600 hover:bg-red-50 font-semibold rounded-lg transition-colors"
+                  >
+                    <XCircle size={18} /> Tolak Produk
+                  </button>
+                  <button 
+                    onClick={() => handleVerification(selectedProduct.id, 'approved')}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white hover:bg-green-700 font-semibold rounded-lg shadow-sm transition-colors"
+                  >
+                    <CheckCircle size={18} /> Setujui & Tayangkan
+                  </button>
+                </div>
+              ) : (
+                // JIKA SUDAH DIREVIEW: Tampilkan Info Riwayat
+                <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center gap-4">
+                    {selectedProduct.status === 'tersedia' ? (
+                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                        <CheckCircle size={24} />
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                        <XCircle size={24} />
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">
+                        Produk ini telah {selectedProduct.status === 'tersedia' ? 'Disetujui' : 'Ditolak'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Pada: {formatDateTime(selectedProduct.verified_at || selectedProduct.updated_at)}
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setIsReviewModalOpen(false)} 
+                    className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    Tutup Review
+                  </button>
+                </div>
+              )}
             </div>
+
           </div>
         </div>
       )}
