@@ -46,30 +46,27 @@ export default function Produk() {
   // FUNGSI BARU: TOMBOL VERIFIKASI (SETUJUI/TOLAK)
   // ==========================================
   const handleVerification = async (id, statusAksi) => {
-    // Tentukan status yang akan dikirim ke database (disesuaikan dengan bahasa Indonesia)
-    const statusDatabase = statusAksi === 'approved' ? 'disetujui' : 'ditolak';
+    // SESUAIKAN DENGAN KEMAUAN BACKEND: 
+    // Jika admin klik setujui, kita kirim 'tersedia'. Jika tolak, kita kirim 'ditolak'.
+    const statusDatabase = statusAksi === 'approved' ? 'tersedia' : 'ditolak';
 
     try {
-      // Mencoba menembak API Backend (Tim backend harus menyiapkan rute PUT ini)
-      // Asumsi endpoint-nya adalah PUT /produk/:id
       await api.put(`/produk/${id}`, { status: statusDatabase });
       
       setIsReviewModalOpen(false);
       fetchProduk(); // Refresh data dari server
-      alert(`Produk berhasil ${statusDatabase}!`);
+      alert(`Produk berhasil diupdate menjadi: ${statusDatabase}!`);
       
     } catch (error) {
-      console.warn("Backend belum siap, melakukan update visual di Frontend.");
+      console.warn("Backend error, mode preview aktif.");
       
-      // FALLBACK FRONTEND: Jika API gagal/belum siap, kita ubah state lokalnya saja 
-      // agar UI tetap berubah dan bisa didemokan.
       const updatedProduk = produk.map(p => 
         p.id === id ? { ...p, status: statusDatabase } : p
       );
       
       setProduk(updatedProduk);
       setIsReviewModalOpen(false);
-      alert(`(Mode Preview) Produk berhasil ${statusDatabase}!`);
+      alert(`(Mode Preview) Produk menjadi: ${statusDatabase}!`);
     }
   };
 
@@ -98,16 +95,27 @@ export default function Produk() {
   // ==========================================
   // KOMPONEN UI: LABEL STATUS (PILL)
   // ==========================================
+  // ==========================================
+  // KOMPONEN UI: LABEL STATUS (PILL)
+  // ==========================================
   const renderStatusLabel = (status) => {
-    const currentStatus = status ? status.toLowerCase() : 'menunggu'; // Default ke 'menunggu' jika kosong
+    // Default ke 'menunggu_verifikasi' sesuai database backend
+    const currentStatus = status ? status.toLowerCase() : 'menunggu_verifikasi'; 
 
-    if (currentStatus === 'disetujui' || currentStatus === 'approved') {
-      return <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">Disetujui</span>;
+    if (currentStatus === 'tersedia') {
+      return <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">Disetujui / Tersedia</span>;
     }
-    if (currentStatus === 'ditolak' || currentStatus === 'rejected') {
+    if (currentStatus === 'ditolak') {
       return <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">Ditolak</span>;
     }
-    // Jika masih 'menunggu' atau 'pending'
+    if (currentStatus === 'habis') {
+      return <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200">Habis</span>;
+    }
+    if (currentStatus === 'nonaktif') {
+      return <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500 border border-gray-200">Nonaktif</span>;
+    }
+    
+    // Jika statusnya 'menunggu_verifikasi'
     return <span className="px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-200">Pending</span>;
   };
 
