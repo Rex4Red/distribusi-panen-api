@@ -325,7 +325,7 @@ export default function Produk() {
                   {/* FORM CATATAN ADMIN (SELALU BISA DIKETIK) */}
                   <div className="pt-2">
                     <p className="text-xs text-blue-600 uppercase font-bold mb-2 flex items-center gap-1">
-                      <Info size={14} /> Catatan Admin (Internal)
+                      <Info size={14} /> Catatan Admin
                     </p>
                     
                     <textarea

@@ -1,40 +1,45 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-// Tambahkan ikon Camera untuk efek hover
 import { LayoutDashboard, Users, Box, ShoppingCart, CreditCard, Truck, BarChart2, Bell, User, LogOut, Camera } from 'lucide-react';
 
 export default function Layout() {
   const navigate = useNavigate();
-  
-  // 1. Ref untuk memicu input file yang disembunyikan
   const fileInputRef = useRef(null);
-  
-  // 2. State untuk menyimpan foto profil (mengambil dari localStorage jika ada)
+
+  // 1. MENGAMBIL EMAIL DINAMIS DARI LOKAL STORAGE SAAT LOGIN
+  const adminEmail = localStorage.getItem('adminEmail') || 'admin@panen.com';
+
+  // 2. State untuk foto profil (galeri lokal atau inisial email)
   const [profileImg, setProfileImg] = useState(() => {
-    return localStorage.getItem('adminProfileImg') || "https://ui-avatars.com/api/?name=Admin+Panen&background=FFB800&color=fff";
+    const savedImg = localStorage.getItem('adminProfileImg');
+    if (savedImg) return savedImg;
+    
+    // Jika tidak ada foto, buat avatar otomatis dari inisial email
+    const namePrefix = adminEmail.split('@')[0];
+    return `https://ui-avatars.com/api/?name=${namePrefix}&background=151515&color=fff`;
   });
 
   const handleLogout = () => {
+    // Hapus semua data sesi saat logout
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('adminEmail'); 
     navigate('/login');
   };
 
-  // 3. Fungsi untuk menangani saat foto dipilih dari galeri
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Membaca file gambar dan mengubahnya menjadi format Base64 (URL)
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result;
-        setProfileImg(base64String); // Update UI seketika
-        localStorage.setItem('adminProfileImg', base64String); // Simpan permanen di browser
+        setProfileImg(base64String); 
+        localStorage.setItem('adminProfileImg', base64String);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // 4. Fungsi untuk membuka dialog file saat avatar diklik
   const handleAvatarClick = () => {
     fileInputRef.current.click();
   };
@@ -60,7 +65,6 @@ export default function Layout() {
         {/* PROFIL USER */}
         <div className="mb-10 flex flex-col gap-3">
           
-          {/* Avatar Interaktif yang Bisa Diklik */}
           <div 
             className="relative w-14 h-14 cursor-pointer group"
             onClick={handleAvatarClick}
@@ -71,17 +75,12 @@ export default function Layout() {
               alt="Profile" 
               className="w-full h-full rounded-2xl object-cover transition-all duration-300 group-hover:brightness-50"
             />
-            
-            {/* Ikon Kamera Transparan saat di-hover */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               <Camera size={20} className="text-white" />
             </div>
-            
-            {/* Titik Notifikasi Merah (Z-index agar tidak tertutup overlay) */}
             <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-[3px] border-[#151515] rounded-full z-10"></span>
           </div>
 
-          {/* Input File Tersembunyi */}
           <input 
             type="file" 
             accept="image/png, image/jpeg, image/jpg" 
@@ -92,7 +91,8 @@ export default function Layout() {
 
           <div className="mt-1">
             <h2 className="text-white font-bold text-xl tracking-wide">Admin Panen</h2>
-            <p className="text-sm opacity-70 mt-0.5">admin@distribusi.com</p>
+            {/* 3. MENAMPILKAN EMAIL SECARA DINAMIS */}
+            <p className="text-sm opacity-70 mt-0.5">{adminEmail}</p>
           </div>
         </div>
 
@@ -116,7 +116,7 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* Tombol Logout di Bawah */}
+        {/* Tombol Logout */}
         <div className="pt-6 mt-6 border-t border-gray-800/50">
           <button 
             onClick={handleLogout}
