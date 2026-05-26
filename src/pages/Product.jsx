@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Eye, CheckCircle, XCircle, X, Image as ImageIcon, ChevronLeft, ChevronRight, Info } from 'lucide-react';
+import { Search, Eye, CheckCircle, XCircle, X, Image as ImageIcon, ChevronLeft, ChevronRight, Info, Save } from 'lucide-react';
 import api from '../api';
 
 export default function Produk() {
@@ -7,11 +7,9 @@ export default function Produk() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  // State untuk Modal Review / Verifikasi
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   
-  // State BARU: Untuk menyimpan catatan admin
   const [adminNote, setAdminNote] = useState('');
   
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
@@ -52,16 +50,15 @@ export default function Produk() {
   const handleReviewClick = (item) => {
     setSelectedProduct(item);
     setActivePhotoIndex(0); 
-    // Mengisi kolom catatan dengan data dari database jika sudah ada
     setAdminNote(item.catatan_admin || ''); 
     setIsReviewModalOpen(true);
   };
 
+  // Fungsi untuk Tombol Setujui/Tolak
   const handleVerification = async (id, statusAksi) => {
     const statusDatabase = statusAksi === 'approved' ? 'tersedia' : 'ditolak';
 
     try {
-      // Mengirim status DAN catatan admin ke backend
       await api.put(`/produk/${id}`, { 
         status: statusDatabase,
         catatan_admin: adminNote 
@@ -73,20 +70,44 @@ export default function Produk() {
       
     } catch (error) {
       console.warn("Backend error, mode preview aktif.");
-      
-      // Fallback Mode Preview
       const updatedProduk = produk.map(p => 
         p.id === id ? { 
           ...p, 
           status: statusDatabase, 
-          catatan_admin: adminNote, // Simpan catatan di memori lokal
+          catatan_admin: adminNote, 
           verified_at: new Date().toISOString() 
         } : p
       );
-      
       setProduk(updatedProduk);
       setIsReviewModalOpen(false);
       alert(`(Mode Preview) Produk menjadi: ${statusDatabase}!`);
+    }
+  };
+
+  // ==========================================
+  // FUNGSI BARU: UPDATE CATATAN SAJA
+  // ==========================================
+  const handleUpdateNote = async () => {
+    try {
+      // Kirim status yang sama seperti sebelumnya, tapi catatannya baru
+      await api.put(`/produk/${selectedProduct.id}`, { 
+        status: selectedProduct.status,
+        catatan_admin: adminNote 
+      });
+      
+      fetchProduk();
+      // Update local state agar tombol "Simpan" menghilang setelah ditekan
+      setSelectedProduct(prev => ({ ...prev, catatan_admin: adminNote }));
+      alert('Catatan berhasil diperbarui!');
+      
+    } catch (error) {
+      // Fallback Mode Preview
+      const updatedProduk = produk.map(p => 
+        p.id === selectedProduct.id ? { ...p, catatan_admin: adminNote } : p
+      );
+      setProduk(updatedProduk);
+      setSelectedProduct(prev => ({ ...prev, catatan_admin: adminNote }));
+      alert('(Mode Preview) Catatan berhasil diperbarui!');
     }
   };
 
@@ -123,7 +144,6 @@ export default function Produk() {
     return <span className="px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-200">Pending</span>;
   };
 
-  // Fungsi dinamis untuk teks riwayat di bagian bawah modal
   const getHistoryStatusProps = (status) => {
     switch (status) {
       case 'tersedia': return { text: 'Produk ini telah Disetujui', icon: <CheckCircle size={24} />, bg: 'bg-green-100', textCol: 'text-green-600' };
@@ -133,6 +153,9 @@ export default function Produk() {
       default: return { text: 'Status tidak diketahui', icon: <Info size={24} />, bg: 'bg-gray-100', textCol: 'text-gray-600' };
     }
   };
+
+  // Cek apakah admin sedang mengubah catatan aslinya
+  const isNoteChanged = selectedProduct && adminNote !== (selectedProduct.catatan_admin || '');
 
   return (
     <div className="space-y-6 relative">
@@ -299,28 +322,29 @@ export default function Produk() {
                     </p>
                   </div>
 
-                  {/* TAMBAHAN: FORM / HASIL CATATAN ADMIN */}
+                  {/* FORM CATATAN ADMIN (SELALU BISA DIKETIK) */}
                   <div className="pt-2">
                     <p className="text-xs text-blue-600 uppercase font-bold mb-2 flex items-center gap-1">
                       <Info size={14} /> Catatan Admin (Internal)
                     </p>
-                    {(!selectedProduct.status || selectedProduct.status === 'menunggu_verifikasi') ? (
-                      // Jika pending, tampilkan input text area
-                      <textarea
-                        value={adminNote}
-                        onChange={(e) => setAdminNote(e.target.value)}
-                        placeholder="Tambahkan alasan penolakan atau catatan verifikasi di sini..."
-                        className="w-full px-4 py-3 border border-blue-200 bg-blue-50/30 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                        rows="3"
-                      />
-                    ) : (
-                      // Jika sudah direview, tampilkan teks secara read-only
-                      <div className="w-full px-4 py-3 border border-blue-100 bg-blue-50/50 rounded-xl text-sm text-gray-700 min-h-15">
-                        {selectedProduct.catatan_admin ? (
-                          selectedProduct.catatan_admin
-                        ) : (
-                          <em className="text-gray-400">Tidak ada catatan admin yang dilampirkan.</em>
-                        )}
+                    
+                    <textarea
+                      value={adminNote}
+                      onChange={(e) => setAdminNote(e.target.value)}
+                      placeholder="Tambahkan atau edit catatan di sini..."
+                      className="w-full px-4 py-3 border border-blue-200 bg-blue-50/30 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
+                      rows="3"
+                    />
+
+                    {/* Munculkan Tombol Simpan HANYA JIKA ada perubahan pada ketikan DAN status BUKAN pending */}
+                    {selectedProduct.status && selectedProduct.status !== 'menunggu_verifikasi' && isNoteChanged && (
+                      <div className="flex justify-end mt-2">
+                        <button 
+                          onClick={handleUpdateNote}
+                          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors"
+                        >
+                          <Save size={16} /> Simpan Perubahan Catatan
+                        </button>
                       </div>
                     )}
                   </div>
