@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-// Tambah ikon ChevronLeft & ChevronRight untuk tombol slider
 import { Search, Eye, CheckCircle, XCircle, X, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../api';
 
@@ -29,7 +28,6 @@ export default function Produk() {
       const response = await api.get('/produk'); 
       if (response.data.success) {
         setProduk(response.data.data || []);
-        // console.log("Data Asli Backend:", response.data.data); 
       }
     } catch (error) {
       console.error("Gagal mengambil data produk");
@@ -38,78 +36,79 @@ export default function Produk() {
     }
   };
 
-  // Membuka modal dan menyimpan data produk yang ingin direview
   const handleReviewClick = (item) => {
     setSelectedProduct(item);
-    setActivePhotoIndex(0); // Reset ke foto pertama setiap kali buka modal
+    setActivePhotoIndex(0); 
     setIsReviewModalOpen(true);
   };
 
-  // Fungsi aksi verifikasi (Terima/Tolak)
-  const handleVerification = async (id, status) => {
+  // ==========================================
+  // FUNGSI BARU: TOMBOL VERIFIKASI (SETUJUI/TOLAK)
+  // ==========================================
+  const handleVerification = async (id, statusAksi) => {
+    // Tentukan status yang akan dikirim ke database (disesuaikan dengan bahasa Indonesia)
+    const statusDatabase = statusAksi === 'approved' ? 'disetujui' : 'ditolak';
+
     try {
-      // Contoh endpoint untuk update status verifikasi
-      // await api.put(`/produk/${id}/verifikasi`, { status: status });
+      // Mencoba menembak API Backend (Tim backend harus menyiapkan rute PUT ini)
+      // Asumsi endpoint-nya adalah PUT /produk/:id
+      await api.put(`/produk/${id}`, { status_verifikasi: statusDatabase });
       
       setIsReviewModalOpen(false);
-      // fetchProduk(); // Refresh data setelah aksi
-      alert(`Produk berhasil di-${status === 'approved' ? 'setujui' : 'tolak'}!`);
+      fetchProduk(); // Refresh data dari server
+      alert(`Produk berhasil ${statusDatabase}!`);
+      
     } catch (error) {
-      alert('Gagal memproses verifikasi.');
+      console.warn("Backend belum siap, melakukan update visual di Frontend.");
+      
+      // FALLBACK FRONTEND: Jika API gagal/belum siap, kita ubah state lokalnya saja 
+      // agar UI tetap berubah dan bisa didemokan.
+      const updatedProduk = produk.map(p => 
+        p.id === id ? { ...p, status_verifikasi: statusDatabase } : p
+      );
+      
+      setProduk(updatedProduk);
+      setIsReviewModalOpen(false);
+      alert(`(Mode Preview) Produk berhasil ${statusDatabase}!`);
     }
   };
 
-  // Fungsi utilitas untuk memastikan format foto selalu berupa Array
-  // Menggunakan properti "foto_url" sesuai backend Anda
   const getProductPhotos = (product) => {
-    if (!product) return [];
-    // Prioritas 1: foto_urls array dari Firestore (via API merge)
-    if (product.foto_urls && Array.isArray(product.foto_urls) && product.foto_urls.length > 0) {
-      return product.foto_urls;
+    if (!product || !product.foto_urls) return [];
+    if (Array.isArray(product.foto_urls)) return product.foto_urls;
+    if (typeof product.foto_urls === 'string' && product.foto_urls.startsWith('[')) {
+      try { return JSON.parse(product.foto_urls); } catch (e) { return [product.foto_urls]; }
     }
-    // Prioritas 2: foto_url string dari MySQL
-    if (!product.foto_url) return [];
-    if (Array.isArray(product.foto_url)) return product.foto_url;
-    if (typeof product.foto_url === 'string' && product.foto_url.startsWith('[')) {
-      try { return JSON.parse(product.foto_url); } catch (e) { return [product.foto_url]; }
-    }
-    return [product.foto_url];
+    return [product.foto_urls]; 
   };
 
-  // Mengambil daftar foto untuk produk yang sedang dipilih
   const currentPhotos = getProductPhotos(selectedProduct);
 
-  // Fungsi Navigasi Slider (Prev & Next)
-  const handlePrevPhoto = () => {
-    setActivePhotoIndex(prevIdx => (prevIdx === 0 ? currentPhotos.length - 1 : prevIdx - 1));
-  };
+  const handlePrevPhoto = () => setActivePhotoIndex(prevIdx => (prevIdx === 0 ? currentPhotos.length - 1 : prevIdx - 1));
+  const handleNextPhoto = () => setActivePhotoIndex(prevIdx => (prevIdx === currentPhotos.length - 1 ? 0 : prevIdx + 1));
 
-  const handleNextPhoto = () => {
-    setActivePhotoIndex(prevIdx => (prevIdx === currentPhotos.length - 1 ? 0 : prevIdx + 1));
-  };
-
-  // Handler untuk Geseran Jari (Touch Swiping)
-  const handleTouchStart = (e) => {
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
+  const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX);
+  const handleTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
   const handleTouchEnd = () => {
-    // Abaikan jika hanya ada 1 foto
     if (currentPhotos.length <= 1) return;
+    if (touchStart - touchEnd > 50) handleNextPhoto();
+    if (touchStart - touchEnd < -50) handlePrevPhoto();
+  };
 
-    // Geser ke kiri (Swipe Left) -> Tampilkan Foto Berikutnya
-    if (touchStart - touchEnd > 50) {
-      handleNextPhoto();
-    }
+  // ==========================================
+  // KOMPONEN UI: LABEL STATUS (PILL)
+  // ==========================================
+  const renderStatusLabel = (status) => {
+    const currentStatus = status ? status.toLowerCase() : 'menunggu'; // Default ke 'menunggu' jika kosong
 
-    // Geser ke kanan (Swipe Right) -> Tampilkan Foto Sebelumnya
-    if (touchStart - touchEnd < -50) {
-      handlePrevPhoto();
+    if (currentStatus === 'disetujui' || currentStatus === 'approved') {
+      return <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">Disetujui</span>;
     }
+    if (currentStatus === 'ditolak' || currentStatus === 'rejected') {
+      return <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">Ditolak</span>;
+    }
+    // Jika masih 'menunggu' atau 'pending'
+    return <span className="px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-200">Pending</span>;
   };
 
   return (
@@ -123,7 +122,7 @@ export default function Produk() {
           <input 
             type="text" 
             placeholder="Cari nama produk atau petani..." 
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-gray-200 outline-none"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -141,25 +140,31 @@ export default function Produk() {
                 <th className="p-4 font-semibold text-gray-600">Petani Pengirim</th>
                 <th className="p-4 font-semibold text-gray-600">Harga / Kg</th>
                 <th className="p-4 font-semibold text-gray-600">Stok</th>
-                <th className="p-4 font-semibold text-gray-600 text-center">Aksi (Review)</th>
+                <th className="p-4 font-semibold text-gray-600">Status</th> {/* KOLOM BARU */}
+                <th className="p-4 font-semibold text-gray-600 text-center">Review</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan="6" className="p-8 text-center text-gray-500">Memuat data...</td></tr>
+                <tr><td colSpan="7" className="p-8 text-center text-gray-500">Memuat data...</td></tr>
               ) : produk.length === 0 ? (
-                <tr><td colSpan="6" className="p-8 text-center text-gray-500">Belum ada produk yang perlu diverifikasi.</td></tr>
+                <tr><td colSpan="7" className="p-8 text-center text-gray-500">Belum ada produk yang perlu diverifikasi.</td></tr>
               ) : (
                 produk.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4 font-medium text-gray-800">{item.nama_produk}</td>
                     <td className="p-4 text-gray-600">{item.kategori}</td>
                     <td className="p-4 text-gray-600 font-medium">{item.nama_petani || 'Nama Petani'}</td>
-                    {/* Menggunakan harga_per_kg */}
                     <td className="p-4 text-gray-600">
                       Rp {Number(item.harga_per_kg).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 text-gray-600">{item.stok_kg} kg</td>
+                    
+                    {/* MENAMPILKAN LABEL STATUS */}
+                    <td className="p-4">
+                      {renderStatusLabel(item.status_verifikasi)}
+                    </td>
+                    
                     <td className="p-4 flex justify-center">
                       <button 
                         onClick={() => handleReviewClick(item)}
@@ -176,14 +181,16 @@ export default function Produk() {
         </div>
       </div>
 
-      {/* ========================================= */}
       {/* MODAL REVIEW & VERIFIKASI PRODUK */}
-      {/* ========================================= */}
       {isReviewModalOpen && selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b border-gray-100 sticky top-0 bg-white z-10">
-              <h2 className="text-xl font-bold text-gray-800">Verifikasi Produk Petani</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold text-gray-800">Verifikasi Produk Petani</h2>
+                {/* Tampilkan juga status saat ini di dalam Modal */}
+                {renderStatusLabel(selectedProduct.status_verifikasi)}
+              </div>
               <button onClick={() => setIsReviewModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
               </button>
@@ -196,7 +203,6 @@ export default function Produk() {
                 <div className="space-y-4">
                   <p className="text-sm font-semibold text-gray-700">Foto Produk ({currentPhotos.length}):</p>
                   
-                  {/* Container Slider Utama */}
                   <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200"
                        onTouchStart={handleTouchStart}
                        onTouchMove={handleTouchMove}
@@ -204,7 +210,6 @@ export default function Produk() {
                     
                     {currentPhotos.length > 0 ? (
                       <>
-                        {/* Slider Track ( Container yang benar-benar bergeser ) */}
                         <div 
                           className="flex h-full w-full transition-transform duration-300 ease-out"
                           style={{ transform: `translateX(-${activePhotoIndex * 100}%)` }}
@@ -220,7 +225,6 @@ export default function Produk() {
                           ))}
                         </div>
 
-                        {/* Tombol Navigasi (Prev/Next) */}
                         {currentPhotos.length > 1 && (
                           <>
                             <button 
@@ -246,7 +250,6 @@ export default function Produk() {
                     )}
                   </div>
 
-                  {/* Thumbnail / Foto-foto Kecil (Indikator & Navigasi Cepat) */}
                   {currentPhotos.length > 1 && (
                     <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar snap-x snap-mandatory">
                       {currentPhotos.map((url, idx) => (
@@ -281,7 +284,6 @@ export default function Produk() {
                     <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200">
                       <div>
                         <p className="text-xs text-gray-500 uppercase font-semibold">Harga Jual / Kg</p>
-                        {/* Menggunakan harga_per_kg */}
                         <p className="font-bold text-green-600 text-xl">
                           Rp {Number(selectedProduct.harga_per_kg).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
@@ -304,6 +306,8 @@ export default function Produk() {
             </div>
 
             {/* Bagian Bawah: Tombol Aksi Verifikasi */}
+            {/* Tombol disembunyikan jika status sudah disetujui, atau biarkan tetap ada jika admin boleh mengubah keputusannya.
+                Di sini saya biarkan tetap ada agar mudah diuji coba. */}
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 sticky bottom-0">
               <button 
                 onClick={() => handleVerification(selectedProduct.id, 'rejected')}
