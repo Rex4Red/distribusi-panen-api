@@ -52,7 +52,7 @@ export default function Produk() {
     try {
       // Mencoba menembak API Backend (Tim backend harus menyiapkan rute PUT ini)
       // Asumsi endpoint-nya adalah PUT /produk/:id
-      await api.put(`/produk/${id}`, { status_verifikasi: statusDatabase });
+      await api.put(`/produk/${id}`, { status: statusDatabase });
       
       setIsReviewModalOpen(false);
       fetchProduk(); // Refresh data dari server
@@ -64,7 +64,7 @@ export default function Produk() {
       // FALLBACK FRONTEND: Jika API gagal/belum siap, kita ubah state lokalnya saja 
       // agar UI tetap berubah dan bisa didemokan.
       const updatedProduk = produk.map(p => 
-        p.id === id ? { ...p, status_verifikasi: statusDatabase } : p
+        p.id === id ? { ...p, status: statusDatabase } : p
       );
       
       setProduk(updatedProduk);
@@ -161,9 +161,10 @@ export default function Produk() {
                     <td className="p-4 text-gray-600">{item.stok_kg} kg</td>
                     
                     {/* MENAMPILKAN LABEL STATUS */}
-                    <td className="p-4">
-                      {renderStatusLabel(item.status_verifikasi)}
-                    </td>
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-xl font-bold text-gray-800">Verifikasi Produk Petani</h2>
+                      {renderStatusLabel(selectedProduct.status)}
+                    </div>
                     
                     <td className="p-4 flex justify-center">
                       <button 
