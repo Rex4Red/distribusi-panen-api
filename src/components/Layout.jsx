@@ -49,7 +49,7 @@ export default function Layout() {
     { name: 'Data Petani', path: '/petani', icon: <Users size={20} /> },
     { name: 'Produk Panen', path: '/produk', icon: <Box size={20} /> },
     { name: 'Transaksi', path: '/transaksi', icon: <ShoppingCart size={20} /> },
-    { name: 'Pembayaran', path: '/pembayaran', icon: <CreditCard size={20} /> },
+    // { name: 'Pembayaran', path: '/pembayaran', icon: <CreditCard size={20} /> },
     { name: 'Pengiriman', path: '/pengiriman', icon: <Truck size={20} /> },
     { name: 'Stok Realtime', path: '/stok-realtime', icon: <BarChart2 size={20} /> },
     { name: 'Notifikasi', path: '/notifikasi', icon: <Bell size={20} /> },
