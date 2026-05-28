@@ -176,13 +176,16 @@ exports.getAll = async (req, res, next) => {
     // admin bisa lihat semua (tanpa WHERE)
 
     const [rows] = await db.query(`
-      SELECT t.*, pp.nama_produk, u_petani.nama as nama_petani, u_pembeli.nama as nama_pembeli
+      SELECT t.*, pp.nama_produk, u_petani.nama as nama_petani, u_pembeli.nama as nama_pembeli,
+             pay.id AS pembayaran_id, pay.metode, pay.jumlah AS jumlah_pembayaran,
+             pay.status AS status_pembayaran, pay.bukti_bayar_url
       FROM transaksi t
       JOIN produk_panen pp ON t.produk_id = pp.id
       JOIN petani p ON t.petani_id = p.id
       JOIN users u_petani ON p.user_id = u_petani.id
       JOIN pembeli pb ON t.pembeli_id = pb.id
       JOIN users u_pembeli ON pb.user_id = u_pembeli.id
+      LEFT JOIN pembayaran pay ON t.id = pay.transaksi_id
       ${whereClause}
       ORDER BY t.created_at DESC
     `, params);
@@ -201,13 +204,16 @@ exports.getAll = async (req, res, next) => {
 exports.getById = async (req, res, next) => {
   try {
     const [rows] = await db.query(`
-      SELECT t.*, pp.nama_produk, u_petani.nama as nama_petani, u_pembeli.nama as nama_pembeli
+      SELECT t.*, pp.nama_produk, u_petani.nama as nama_petani, u_pembeli.nama as nama_pembeli,
+             pay.id AS pembayaran_id, pay.metode, pay.jumlah AS jumlah_pembayaran,
+             pay.status AS status_pembayaran, pay.bukti_bayar_url
       FROM transaksi t
       JOIN produk_panen pp ON t.produk_id = pp.id
       JOIN petani p ON t.petani_id = p.id
       JOIN users u_petani ON p.user_id = u_petani.id
       JOIN pembeli pb ON t.pembeli_id = pb.id
       JOIN users u_pembeli ON pb.user_id = u_pembeli.id
+      LEFT JOIN pembayaran pay ON t.id = pay.transaksi_id
       WHERE t.id = ?
     `, [req.params.id]);
 
