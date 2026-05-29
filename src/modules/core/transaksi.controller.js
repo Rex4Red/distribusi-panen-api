@@ -241,6 +241,17 @@ exports.update = async (req, res, next) => {
       });
     }
 
+    // Validasi: tidak bisa kirim jika belum dibayar
+    if (status === 'dikirim') {
+      const [pembayaran] = await db.query('SELECT id FROM pembayaran WHERE transaksi_id = ?', [req.params.id]);
+      if (pembayaran.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Tidak bisa mengirim pesanan. Pembeli belum melakukan pembayaran.',
+        });
+      }
+    }
+
     // Update di MySQL
     const [result] = await db.query('UPDATE transaksi SET status = ? WHERE id = ?', [status, req.params.id]);
 
