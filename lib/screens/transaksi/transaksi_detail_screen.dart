@@ -200,26 +200,56 @@ class _TransaksiDetailScreenState extends State<TransaksiDetailScreen> {
                 ),
               ),
             ],
-            // PETANI: Tandai dikirim saat dikonfirmasi
-            if (isPetani && _t.status == 'dikonfirmasi')
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed:
-                      _loading ? null : () => _updateStatus('dikirim'),
-                  icon: const Icon(Icons.local_shipping_outlined),
-                  label: const Text('Tandai Dikirim',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1565C0),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
+            // PETANI: Tandai dikirim saat dikonfirmasi DAN sudah dibayar
+            if (isPetani && _t.status == 'dikonfirmasi') ...[
+              if (_t.sudahBayar)
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed:
+                        _loading ? null : () => _updateStatus('dikirim'),
+                    icon: const Icon(Icons.local_shipping_outlined),
+                    label: const Text('Tandai Dikirim',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1565C0),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFF57C00).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.hourglass_top, color: Color(0xFFF57C00), size: 22),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Menunggu Pembayaran',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFFE65100))),
+                            const SizedBox(height: 2),
+                            Text('Pembeli belum melakukan pembayaran. Pesanan tidak bisa dikirim sebelum dibayar.',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
+            ],
             // PEMBELI: Batalkan pesanan saat masih pending
             if (isPembeli && _t.status == 'pending')
               SizedBox(
