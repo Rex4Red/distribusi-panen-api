@@ -454,55 +454,46 @@ class _TransaksiDetailScreenState extends State<TransaksiDetailScreen> {
   }
 
   _StepStatus _getStepStatus(int stepIndex) {
-    // Status mapping:
-    // 0: Pesanan Dibuat — always completed (if transaction exists)
-    // 1: Dikonfirmasi — completed if status >= dikonfirmasi
-    // 2: Dibayar — completed if sudahBayar
-    // 3: Dikirim — completed if status >= dikirim
-    // 4: Selesai — completed if status == selesai
+    // Logic:
+    // - GREEN (completed) = step sudah dilalui
+    // - ORANGE (active) = step yang sedang menunggu aksi
+    // - GREY (pending) = belum sampai step ini
+    //
+    // Flow: Pesanan Dibuat → Dikonfirmasi → Dibayar → Dikirim → Selesai
 
-    final statusOrder = {
-      'pending': 0,
-      'dikonfirmasi': 1,
-      'dikirim': 3,
-      'selesai': 4,
-      'dibatalkan': -1,
-    };
-
-    final currentLevel = statusOrder[_t.status] ?? 0;
+    if (_t.status == 'dibatalkan') {
+      return stepIndex == 0 ? _StepStatus.completed : _StepStatus.pending;
+    }
 
     switch (stepIndex) {
-      case 0: // Pesanan Dibuat
-        if (_t.status == 'dibatalkan') return _StepStatus.completed;
-        return currentLevel >= 0
-            ? (currentLevel == 0
-                ? _StepStatus.active
-                : _StepStatus.completed)
-            : _StepStatus.pending;
+      case 0: // Pesanan Dibuat — selalu hijau
+        return _StepStatus.completed;
+
       case 1: // Dikonfirmasi
-        if (_t.status == 'dibatalkan') return _StepStatus.pending;
-        return currentLevel >= 1
-            ? (currentLevel == 1
-                ? _StepStatus.active
-                : _StepStatus.completed)
-            : _StepStatus.pending;
+        if (_t.status == 'pending') return _StepStatus.active; // menunggu konfirmasi
+        // dikonfirmasi / dikirim / selesai → hijau
+        return _StepStatus.completed;
+
       case 2: // Dibayar
-        if (_t.status == 'dibatalkan') return _StepStatus.pending;
-        if (_t.sudahBayar) return _StepStatus.completed;
-        if (currentLevel == 1) return _StepStatus.active; // perlu bayar
+        if (_t.status == 'pending') return _StepStatus.pending;
+        if (_t.sudahBayar) return _StepStatus.completed; // sudah bayar → hijau
+        if (_t.status == 'dikonfirmasi') return _StepStatus.active; // menunggu bayar
+        // dikirim / selesai tanpa record bayar (edge case) → completed
+        if (_t.status == 'dikirim' || _t.status == 'selesai') return _StepStatus.completed;
         return _StepStatus.pending;
+
       case 3: // Dikirim
-        if (_t.status == 'dibatalkan') return _StepStatus.pending;
-        return currentLevel >= 3
-            ? (currentLevel == 3
-                ? _StepStatus.active
-                : _StepStatus.completed)
-            : _StepStatus.pending;
+        if (_t.status == 'dikirim') return _StepStatus.completed; // sudah dikirim → hijau
+        if (_t.status == 'selesai') return _StepStatus.completed;
+        // dikonfirmasi + sudah bayar → menunggu kirim (oranye)
+        if (_t.status == 'dikonfirmasi' && _t.sudahBayar) return _StepStatus.active;
+        return _StepStatus.pending;
+
       case 4: // Selesai
-        if (_t.status == 'dibatalkan') return _StepStatus.pending;
-        return currentLevel >= 4
-            ? _StepStatus.completed
-            : _StepStatus.pending;
+        if (_t.status == 'selesai') return _StepStatus.completed;
+        if (_t.status == 'dikirim') return _StepStatus.active; // menunggu konfirmasi diterima
+        return _StepStatus.pending;
+
       default:
         return _StepStatus.pending;
     }
