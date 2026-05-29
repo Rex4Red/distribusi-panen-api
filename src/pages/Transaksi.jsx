@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Eye, X, CreditCard, Receipt, User, Box, ExternalLink, CalendarClock } from 'lucide-react';
+import { Search, Eye, X, CreditCard, Receipt, User, Box, ExternalLink, CalendarClock, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 import api from '../api';
 
 export default function Transaksi() {
@@ -10,9 +10,23 @@ export default function Transaksi() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedTxn, setSelectedTxn] = useState(null);
 
+  // Delete state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [toast, setToast] = useState(null); // { type: 'success'|'error', message: '' }
+
   useEffect(() => {
     fetchTransaksi();
   }, []);
+
+  // Auto-hide toast
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const formatTanggal = (dateString) => {
     if (!dateString) return '-';
@@ -26,7 +40,7 @@ export default function Transaksi() {
     if (!item) return '-';
     if (item.nama_bisnis) return item.nama_bisnis;
     if (item.pembeli_nama) return item.pembeli_nama;
-    if (item.pembeli?.nama_bisnis) return item.pembeli.nama_bisnis; // Jika format nested
+    if (item.pembeli?.nama_bisnis) return item.pembeli.nama_bisnis;
     
     const pembeliId = Number(item.pembeli_id || item.pembeli);
     if (pembeliId === 1) return 'Restoran Sederhana';
@@ -45,7 +59,6 @@ export default function Transaksi() {
     } catch (error) {
       console.warn("Gagal mengambil API, menggunakan fallback data dummy sesuai database.");
       
-      // Data dummy disesuaikan dengan isi tabel "pembayaran" dan "transaksi" di Cloud SQL Anda
       setTransaksi([
         { 
           id: '4', created_at: '2026-05-24T13:29:33Z', pembeli_id: 1, nama_produk: 'TEST Jagung', jumlah_kg: 5.00, nama_petani: 'Pak Budi', total_harga: 75000, status: 'SELESAI', 
@@ -74,15 +87,66 @@ export default function Transaksi() {
     setIsViewModalOpen(true);
   };
 
+  const handleDeleteClick = (item) => {
+    setDeleteTarget(item);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const response = await api.delete(`/transaksi/${deleteTarget.id}`);
+      if (response.data.success) {
+        setToast({ type: 'success', message: `Transaksi #TXN-${deleteTarget.id} berhasil dihapus` });
+        // Remove from local state
+        setTransaksi(prev => prev.filter(t => t.id !== deleteTarget.id));
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Gagal menghapus transaksi';
+      setToast({ type: 'error', message: msg });
+    } finally {
+      setDeleting(false);
+      setIsDeleteModalOpen(false);
+      setDeleteTarget(null);
+    }
+  };
+
   const renderStatusLabel = (status) => {
     const currentStatus = status ? String(status).toUpperCase() : 'PENDING';
     if (currentStatus === 'SELESAI' || currentStatus === 'LUNAS') return <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">{currentStatus}</span>;
-    if (currentStatus === 'PROSES') return <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">{currentStatus}</span>;
+    if (currentStatus === 'PROSES' || currentStatus === 'DIKIRIM' || currentStatus === 'DIKONFIRMASI') return <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">{currentStatus}</span>;
+    if (currentStatus === 'DIBATALKAN') return <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">{currentStatus}</span>;
     return <span className="px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-200">{currentStatus}</span>;
   };
 
+  const filtered = transaksi
+    .filter((item) => item !== null)
+    .filter((item) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (
+        String(item.id).includes(q) ||
+        getPembeliName(item).toLowerCase().includes(q) ||
+        (item.nama_produk || '').toLowerCase().includes(q) ||
+        (item.nama_petani || '').toLowerCase().includes(q)
+      );
+    });
+
   return (
     <div className="space-y-6 relative">
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed top-6 right-6 z-[100] flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg border text-sm font-semibold animate-slide-in ${
+          toast.type === 'success' 
+            ? 'bg-green-50 text-green-800 border-green-200' 
+            : 'bg-red-50 text-red-800 border-red-200'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+          {toast.message}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Kelola Transaksi</h1>
       </div>
@@ -110,18 +174,16 @@ export default function Transaksi() {
                 <th className="p-4 font-semibold text-gray-600">Petani & Produk</th>
                 <th className="p-4 font-semibold text-gray-600">Total Harga</th>
                 <th className="p-4 font-semibold text-gray-600 text-center">Status</th>
-                <th className="p-4 font-semibold text-gray-600 text-center">Review</th>
+                <th className="p-4 font-semibold text-gray-600 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr><td colSpan="6" className="p-8 text-center text-gray-500">Memuat data...</td></tr>
-              ) : transaksi.length === 0 ? (
+              ) : filtered.length === 0 ? (
                 <tr><td colSpan="6" className="p-8 text-center text-gray-500">Belum ada riwayat transaksi.</td></tr>
               ) : (
-                transaksi
-                  .filter((item) => item !== null)
-                  .map((item, idx) => (
+                filtered.map((item, idx) => (
                   <tr key={idx} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4">
                       <p className="font-bold text-gray-800">#TXN-{item.id}</p>
@@ -144,14 +206,23 @@ export default function Transaksi() {
                     <td className="p-4 text-center">
                       {renderStatusLabel(item.status)}
                     </td>
-                    <td className="p-4 flex justify-center">
-                      <button 
-                        onClick={() => handleViewClick(item)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors"
-                        title="Lihat Detail Transaksi & Pembayaran"
-                      >
-                        <Eye size={18} />
-                      </button>
+                    <td className="p-4">
+                      <div className="flex justify-center gap-1">
+                        <button 
+                          onClick={() => handleViewClick(item)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors"
+                          title="Lihat Detail"
+                        >
+                          <Eye size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteClick(item)}
+                          className="p-1.5 text-red-500 hover:bg-red-100 rounded-md transition-colors"
+                          title="Hapus Transaksi"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -160,6 +231,61 @@ export default function Transaksi() {
           </table>
         </div>
       </div>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {isDeleteModalOpen && deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="mx-auto w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <Trash2 className="text-red-600" size={28} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Hapus Transaksi?</h3>
+              <p className="text-sm text-gray-500 mb-1">
+                Anda akan menghapus transaksi <span className="font-bold text-gray-700">#TXN-{deleteTarget.id}</span>
+              </p>
+              <p className="text-sm text-gray-500 mb-1">
+                Produk: <span className="font-semibold">{deleteTarget.nama_produk}</span>
+              </p>
+              <p className="text-sm text-gray-500">
+                Total: <span className="font-semibold text-gray-700">Rp {Number(deleteTarget.total_harga || 0).toLocaleString('id-ID')}</span>
+              </p>
+              <div className="mt-2 p-3 bg-red-50 rounded-lg border border-red-100">
+                <p className="text-xs text-red-600 flex items-center justify-center gap-1">
+                  <AlertTriangle size={14} />
+                  Data pembayaran terkait juga akan ikut terhapus. Aksi ini tidak dapat dibatalkan!
+                </p>
+              </div>
+            </div>
+            <div className="flex border-t border-gray-100">
+              <button
+                onClick={() => { setIsDeleteModalOpen(false); setDeleteTarget(null); }}
+                disabled={deleting}
+                className="flex-1 px-4 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="flex-1 px-4 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    Menghapus...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    Ya, Hapus
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL DETAIL TRANSAKSI & PEMBAYARAN */}
       {isViewModalOpen && selectedTxn && (
@@ -266,6 +392,16 @@ export default function Transaksi() {
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes slide-in {
+          from { opacity: 0; transform: translateX(20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
