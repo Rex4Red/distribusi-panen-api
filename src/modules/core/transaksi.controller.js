@@ -288,3 +288,34 @@ exports.update = async (req, res, next) => {
     next(error);
   }
 };
+
+// DELETE /transaksi/:id
+exports.remove = async (req, res, next) => {
+  try {
+    const transaksiId = req.params.id;
+
+    // Hapus pembayaran terkait terlebih dahulu (foreign key)
+    await db.query('DELETE FROM pembayaran WHERE transaksi_id = ?', [transaksiId]);
+
+    // Hapus transaksi
+    const [result] = await db.query('DELETE FROM transaksi WHERE id = ?', [transaksiId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' });
+    }
+
+    // Log activity di Firestore
+    await firestore.collection('activity_logs').add({
+      user_id: req.user.id,
+      action: 'delete_transaksi',
+      detail: {
+        transaksi_id: parseInt(transaksiId),
+      },
+      timestamp: new Date(),
+    });
+
+    res.json({ success: true, message: `Transaksi #${transaksiId} berhasil dihapus` });
+  } catch (error) {
+    next(error);
+  }
+};

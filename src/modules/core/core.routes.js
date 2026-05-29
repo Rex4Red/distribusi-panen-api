@@ -38,6 +38,7 @@ router.get('/transaksi', transaksiController.getAll);
 // =============================================
 router.get('/transaksi/:id', transaksiController.getById);
 router.put('/transaksi/:id', transaksiController.update);
+router.delete('/transaksi/:id', transaksiController.remove);
 
 // =============================================
 // PUTRA: Pembayaran routes
