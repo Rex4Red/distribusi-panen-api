@@ -4,6 +4,7 @@ const petaniController = require('./petani.controller');
 const produkController = require('./produk.controller');
 const transaksiController = require('./transaksi.controller');
 const pembayaranController = require('./pembayaran.controller');
+const chatController = require('./chat.controller');
 const authMiddleware = require('../../middleware/auth');
 const upload = require('../../middleware/upload');
 
@@ -45,5 +46,15 @@ router.delete('/transaksi/:id', transaksiController.remove);
 // =============================================
 router.post('/pembayaran', pembayaranController.create);
 router.get('/pembayaran/:id', pembayaranController.getById);
+
+// =============================================
+// Chat Negosiasi Harga (Firestore)
+// =============================================
+router.get('/chat/rooms', chatController.getRooms);
+router.post('/chat/rooms', chatController.createRoom);
+router.get('/chat/rooms/:roomId', chatController.getRoom);
+router.get('/chat/rooms/:roomId/messages', chatController.getMessages);
+router.post('/chat/rooms/:roomId/messages', chatController.sendMessage);
+router.put('/chat/rooms/:roomId/accept-price', chatController.acceptPrice);
 
 module.exports = router;

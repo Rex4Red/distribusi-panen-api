@@ -218,7 +218,7 @@ exports.getAll = async (req, res, next) => {
     // Ambil produk dari MySQL
     const [rows] = await db.query(
       `
-      SELECT pp.*, p.nama_usaha, p.lokasi, u.nama AS nama_petani
+      SELECT pp.*, p.nama_usaha, p.lokasi, u.nama AS nama_petani, u.id AS petani_user_id
       FROM produk_panen pp
       JOIN petani p ON pp.petani_id = p.id
       JOIN users u ON p.user_id = u.id
@@ -256,7 +256,7 @@ exports.getById = async (req, res, next) => {
   try {
     const [rows] = await db.query(
       `
-      SELECT pp.*, p.nama_usaha, p.lokasi, u.nama AS nama_petani
+      SELECT pp.*, p.nama_usaha, p.lokasi, u.nama AS nama_petani, u.id AS petani_user_id
       FROM produk_panen pp
       JOIN petani p ON pp.petani_id = p.id
       JOIN users u ON p.user_id = u.id
