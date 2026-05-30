@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/produk_provider.dart';
-import '../services/stok_service.dart';
+
 import '../services/transaksi_service.dart';
 import '../models/transaksi.dart';
 import '../widgets/stat_card.dart';
@@ -15,7 +15,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final StokService _stokService = StokService();
+
   final TransaksiService _transaksiService = TransaksiService();
   List<Transaksi> _transaksiTerbaru = [];
   int _totalProduk = 0;
@@ -43,7 +43,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           : produkProvider.produkList;
 
       final allTransaksi = await _transaksiService.getAll(token);
-      final stokData = await _stokService.getAll(token);
 
       if (!mounted) return;
 
@@ -52,13 +51,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ? allTransaksi.where((t) => t.petaniId == petaniId).toList()
           : allTransaksi;
 
-      final myStok = petaniId != null
-          ? stokData.where((s) => s['petani_id'] == petaniId).toList()
-          : stokData;
-
+      // Hitung total stok langsung dari produk panen (bukan Firestore)
       double totalStok = 0;
-      for (var s in myStok) {
-        totalStok += (s['stok_kg'] ?? 0).toDouble();
+      for (var p in myProduk) {
+        totalStok += p.stokKg;
       }
 
       setState(() {
