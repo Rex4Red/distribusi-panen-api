@@ -26,12 +26,10 @@ exports.getRooms = async (req, res, next) => {
     // Cari rooms dimana user adalah pembeli atau petani
     const pembeliRooms = await firestore.collection('chat_rooms')
       .where('pembeli_user_id', '==', userId)
-      .orderBy('last_message_time', 'desc')
       .get();
 
     const petaniRooms = await firestore.collection('chat_rooms')
       .where('petani_user_id', '==', userId)
-      .orderBy('last_message_time', 'desc')
       .get();
 
     const rooms = [];
