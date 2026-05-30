@@ -42,7 +42,7 @@ exports.create = async (req, res, next) => {
     // Simpan pembayaran ke MySQL
     const [result] = await db.query(
       'INSERT INTO pembayaran (transaksi_id, metode, jumlah, status) VALUES (?, ?, ?, ?)',
-      [transaksi_id, metode, jumlah, 'lunas']
+      [transaksi_id, metode, jumlah, 'berhasil']
     );
 
     // Log activity di Firestore
@@ -71,7 +71,7 @@ exports.create = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: 'Pembayaran berhasil dibuat',
-      data: { id: result.insertId, transaksi_id, metode, jumlah, status: 'lunas' },
+      data: { id: result.insertId, transaksi_id, metode, jumlah, status: 'berhasil' },
     });
   } catch (error) {
     next(error);
