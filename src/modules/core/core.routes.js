@@ -50,11 +50,13 @@ router.get('/pembayaran/:id', pembayaranController.getById);
 // =============================================
 // Chat Negosiasi Harga (Firestore)
 // =============================================
+router.get('/chat/unread-count', chatController.getUnreadCount);
 router.get('/chat/rooms', chatController.getRooms);
 router.post('/chat/rooms', chatController.createRoom);
 router.get('/chat/rooms/:roomId', chatController.getRoom);
 router.get('/chat/rooms/:roomId/messages', chatController.getMessages);
 router.post('/chat/rooms/:roomId/messages', chatController.sendMessage);
 router.put('/chat/rooms/:roomId/accept-price', chatController.acceptPrice);
+router.put('/chat/rooms/:roomId/read', chatController.markAsRead);
 
 module.exports = router;

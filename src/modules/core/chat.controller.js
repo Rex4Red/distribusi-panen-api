@@ -112,6 +112,8 @@ exports.createRoom = async (req, res, next) => {
       last_message: '',
       last_message_time: new Date(),
       created_at: new Date(),
+      unread_pembeli: 0,
+      unread_petani: 0,
     };
 
     await roomRef.set(roomData);
@@ -194,10 +196,14 @@ exports.sendMessage = async (req, res, next) => {
     const msgRef = await firestore.collection('chat_rooms').doc(roomId)
       .collection('messages').add(msgData);
 
-    // Update last message in room
+    // Update last message in room + increment unread for the OTHER party
+    const unreadField = senderRole === 'petani' ? 'unread_pembeli' : 'unread_petani';
+    const currentUnread = room[unreadField] || 0;
+
     const updateData = {
       last_message: message || (type === 'price_offer' ? `Tawaran harga: Rp ${offered_price}` : ''),
       last_message_time: new Date(),
+      [unreadField]: currentUnread + 1,
     };
 
     // Jika petani menerima harga (type = price_accepted)
@@ -233,11 +239,13 @@ exports.acceptPrice = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Hanya petani yang bisa menyetujui harga' });
     }
 
-    // Update agreed_price
+    // Update agreed_price + increment unread for pembeli
+    const currentUnread = room.unread_pembeli || 0;
     await firestore.collection('chat_rooms').doc(roomId).update({
       agreed_price: price,
       last_message: `✅ Harga deal: Rp ${Number(price).toLocaleString('id-ID')}/kg`,
       last_message_time: new Date(),
+      unread_pembeli: currentUnread + 1,
     });
 
     // Add system message
@@ -282,6 +290,64 @@ exports.getRoom = async (req, res, next) => {
         created_at: room.created_at?.toDate?.() || room.created_at,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /chat/unread-count - Get total unread messages count for current user
+exports.getUnreadCount = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    const pembeliRooms = await firestore.collection('chat_rooms')
+      .where('pembeli_user_id', '==', userId)
+      .get();
+
+    const petaniRooms = await firestore.collection('chat_rooms')
+      .where('petani_user_id', '==', userId)
+      .get();
+
+    let totalUnread = 0;
+
+    pembeliRooms.forEach((doc) => {
+      totalUnread += doc.data().unread_pembeli || 0;
+    });
+
+    petaniRooms.forEach((doc) => {
+      totalUnread += doc.data().unread_petani || 0;
+    });
+
+    res.json({ success: true, unread_count: totalUnread });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// PUT /chat/rooms/:roomId/read - Mark room as read for current user
+exports.markAsRead = async (req, res, next) => {
+  try {
+    const { roomId } = req.params;
+    const userId = req.user.id;
+
+    const roomDoc = await firestore.collection('chat_rooms').doc(roomId).get();
+    if (!roomDoc.exists) {
+      return res.status(404).json({ success: false, message: 'Chat room tidak ditemukan' });
+    }
+
+    const room = roomDoc.data();
+    if (room.pembeli_user_id !== userId && room.petani_user_id !== userId) {
+      return res.status(403).json({ success: false, message: 'Anda tidak memiliki akses ke chat ini' });
+    }
+
+    const isPembeli = room.pembeli_user_id === userId;
+    const updateField = isPembeli ? 'unread_pembeli' : 'unread_petani';
+
+    await firestore.collection('chat_rooms').doc(roomId).update({
+      [updateField]: 0,
+    });
+
+    res.json({ success: true, message: 'Marked as read' });
   } catch (error) {
     next(error);
   }
