@@ -51,10 +51,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ? allTransaksi.where((t) => t.petaniId == petaniId).toList()
           : allTransaksi;
 
-      // Hitung total stok langsung dari produk panen (bukan Firestore)
+      // Hitung total stok dari produk (kecuali yang ditolak)
       double totalStok = 0;
       for (var p in myProduk) {
-        totalStok += p.stokKg;
+        if (p.status != 'ditolak') {
+          totalStok += p.stokKg;
+        }
       }
 
       setState(() {
