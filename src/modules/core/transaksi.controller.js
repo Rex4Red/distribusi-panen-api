@@ -261,7 +261,7 @@ exports.update = async (req, res, next) => {
 
     // Auto-update status pembayaran ke 'lunas' saat transaksi dikirim/selesai
     if (status === 'dikirim' || status === 'selesai') {
-      await db.query('UPDATE pembayaran SET status = ? WHERE transaksi_id = ?', ['lunas', req.params.id]);
+      await db.query('UPDATE pembayaran SET status = ? WHERE transaksi_id = ?', ['berhasil', req.params.id]);
     }
 
     // Log activity di Firestore
